@@ -1,5 +1,5 @@
 import express from "express";
-import upload from "../middleware/uploadMiddleware.js";
+import upload from "../middleware/uploadmiddleware.js";
 import { protect } from "../middleware/authMiddleware.js"
 import { createRoom, getOwnerRooms, getRooms, toggleRoomAvailability } from "../controller/roomcontroller.js";
 
