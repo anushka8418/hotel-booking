@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import Title from '../../components/Title'
 import { assets } from '../../assets/assets'
 import { useAppContext } from '../../context/AppContext'
+import toast from 'react-hot-toast'
 
 const AddRoom = () => {
    
@@ -29,7 +30,7 @@ const AddRoom = () => {
 
 
    const onSubmitHandler  = async(e)=>{
-    e.preventdefault()
+    e.preventDefault()
     if(!inputs.roomType || !inputs.pricePerNight || !inputs.amenities || !Object.values(images).some(image=> image)){
         toast.error("Please fill in all the details")
         return;
@@ -38,12 +39,12 @@ const AddRoom = () => {
     try {
         const formData = new FormData()
         formData.append('roomType', inputs.roomType)
-        formData.append('pricePerNight', inputs.roompricePerNightType)
+        formData.append('pricePerNight', inputs.pricePerNight)
 
         const amenities =  Object.keys(inputs.amenities).filter(key => inputs.amenities[key])
         formData.append('amenities', JSON.stringify(amenities))
 
-        object.keys(images).forEach((key)=>{
+        Object.keys(images).forEach((key)=>{
             images[key] && formData.append('images', images[key])
         })
 
@@ -105,7 +106,7 @@ const AddRoom = () => {
                 <p className='mt-4 text-gray-800'>
                   Price <span  className='text-sm'>/night</span>
                 </p>
-                <input type="number" placeholder='0' className='border border-gray-300 mt-1 rounded p-2 w-24' value={inputs.pricePreNight} onChange={e=>setInputs({...inputs, pricePreNight: e.target.value})} />
+                <input type="number" placeholder='0' className='border border-gray-300 mt-1 rounded p-2 w-24' value={inputs.pricePerNight} onChange={e=>setInputs({...inputs, pricePerNight: e.target.value})} />
             </div>
          </div>
           <p className='text-gray-800 mt-4'>Amenities</p>
