@@ -1,17 +1,45 @@
-import React, { useState } from 'react'
-import { roomsDummyData } from '../../assets/assets'
+import React, { useState, useEffect } from 'react'
 import Title from '../../components/Title'
+import { useAppContext } from '../../context/AppContext'
+import toast from 'react-hot-toast'
 
 const ListRoom = () => {
 
-  const [rooms, setRooms] = useState(roomsDummyData)
+  const [rooms, setRooms] = useState([])
+    const {axios, getToken, user} = useAppContext()
 
-  // Function to handle toggle change
-  const toggleAvailability = (index) => {
-    const updatedRooms = [...rooms];
-    updatedRooms[index].isAvailable = !updatedRooms[index].isAvailable;
-    setRooms(updatedRooms);
-  }
+    const fetchRooms  = async()=>{
+      try {
+        const {data} = await axios.get('/api/rooms/owner', {headers:{Authorization: `Bearer ${await getToken()}`}})
+
+        if(data.success){
+          setRooms(data.rooms)
+        }else{
+          toast.error(data.message)
+        }
+      } catch (error) {
+        toast.error(error.message)
+      }
+    }
+    useEffect(()=>{
+      if(user){
+        fetchRooms()
+      }
+    },[user])
+
+
+  const toggleAvailability = async (index, roomId) => {
+    const { data } = await axios.post('/api/rooms/toggle-availability', 
+            { roomId }, // Send the room ID
+            { headers: { Authorization: `Bearer ${await getToken()}` }})
+            if (data.success){
+              toast.success(data.message)
+              fetchRooms()
+            }else{
+              toast.error(data.message)
+            }
+
+          }
 
   return (
     <div>
@@ -44,11 +72,11 @@ const ListRoom = () => {
                   <label className='relative inline-flex items-center cursor-pointer text-gray-900 gap-3'>
                     
                     
-                    <input 
+                    <input
                         type="checkbox" 
                         className='sr-only peer' 
                         checked={item.isAvailable} 
-                        onChange={() => toggleAvailability(index)} 
+                        onChange={() => toggleAvailability(item._id)} 
                     />
                     
                     <div className='w-12 h-7 bg-slate-300 rounded-full peer peer-checked:bg-blue-600 transition-colors duration-200'></div>
