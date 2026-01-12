@@ -1,3 +1,4 @@
+import transporter from "../configs/nodemailer.js";
 import Booking from "../models/Booking.js"
 import Hotel from "../models/Hotel.js";
 import Room from "../models/Room.js";
@@ -39,7 +40,7 @@ export const createBooking = async(req, res)=>{
         const { room, checkInDate, checkOutDate, guests } = req.body;
         const user = req.user._id;
 
-        //before booking check Availability
+        // 1. Check Availability
        const isAvailable = await checkAvailability({
         checkInDate,
         checkOutDate,
@@ -50,7 +51,7 @@ export const createBooking = async(req, res)=>{
         return res.json({success: false, message: "Room is not available"})
        }
 
-       //get totalPrice from room
+       // 2. Calculate Price
        const roomData = await Room.findById(room).populate("hotel");
        let totalPrice  = roomData.pricePerNight;
 
@@ -59,6 +60,8 @@ export const createBooking = async(req, res)=>{
        const timeDiff = checkOut.getTime() - checkIn.getTime();
        const nights = Math.ceil(timeDiff / (1000*3600*24));
        totalPrice *= nights;
+
+       // 3. Create Booking (This part works!)
        const booking = await Booking.create({
         user,
         room,
@@ -68,12 +71,39 @@ export const createBooking = async(req, res)=>{
         checkOutDate,
         totalPrice,
        })
-     res.json({success: true, message: "Booking created successfully "})
+
+       // 4. Send Email (Wrapped in try/catch so it doesn't crash the app)
+       try {
+           const mailOptions = {
+              from: process.env.SENDER_EMAIL, // FIX: Lowercase 'process'
+              to: req.user.email,
+              subject: 'Hotel Booking Details',
+              html: `
+              <h2> Your Booking Details </h2>
+              <p> Dear ${req.user.username},</p>
+              <p> Thank you for choosing us! Here is your booking Details: </p>
+              <ul> 
+                  <li><strong> Booking ID:</strong> ${booking._id} </li>
+                  <li><strong> Hotel Name:</strong> ${roomData.hotel.name} </li>
+                  <li><strong> Location:</strong> ${roomData.hotel.address} </li>
+                  <li><strong> Date:</strong> ${new Date(booking.checkInDate).toDateString()} </li>
+                  <li><strong> Total Amount:</strong> ${process.env.CURRENCY || '$'} ${booking.totalPrice} </li>
+              </ul>
+              <P> We look forward to welcoming you! </P>
+              `
+           }
+           await transporter.sendMail(mailOptions)
+       } catch (emailError) {
+           console.log("Email failed to send:", emailError.message);
+           // We do NOT stop the request here. We just log the error.
+       }
+
+     // 5. Send Success Response
+     res.json({success: true, message: "Booking created successfully"})
 
     } catch (error) {
-        console.log(error);
-     res.json({success: false, message: "Failed to create booking"})
-        
+        console.log("Booking Error:", error);
+        res.json({success: false, message: "Failed to create booking"})
     }
 };
 
@@ -93,7 +123,7 @@ export const getUserBooking = async (req,res) => {
 
 export const getHotelBooking = async (req, res) => {
     try {
-        const hotel = await Hotel.findOne({owner: req.auth.userId});
+        const hotel = await Hotel.findOne({owner: req.user._id}); // Ensure usage of req.user._id if using protect middleware
     if(!hotel){
         return res.json({success: false, message: "No hotel found"})
     }
